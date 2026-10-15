@@ -1,11 +1,6 @@
-export default function sitemap() {
-  const baseUrl = "https://www.evergreenremedyghana.com";
+import type { MetadataRoute } from "next";
 
-  return [
-    { url: `${baseUrl}/`, lastModified: new Date() },
-    { url: `${baseUrl}/benefits`, lastModified: new Date() },
-    { url: `${baseUrl}/product`, lastModified: new Date() },
-    { url: `${baseUrl}/reviews`, lastModified: new Date() },
-    { url: `${baseUrl}/pricing`, lastModified: new Date() },
-  ];
+// Single-page site: sections like #pricing are anchors, not separate URLs
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [{ url: "https://www.evergreenremedyghana.com/", lastModified: new Date(), priority: 1 }];
 }
