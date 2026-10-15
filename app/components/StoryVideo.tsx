@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
+import { analytics } from '@/lib/analytics';
 
 // The ad is a 9:16 talking-head clip with burned-in captions, so it's shown
 // like a social "story": muted autoplay while on screen, tap for sound.
@@ -34,6 +35,7 @@ export default function StoryVideo({ className = '', label }: { className?: stri
       v.currentTime = 0;
       v.muted = false;
       setMuted(false);
+      analytics.videoSoundOn();
       setPaused(false);
       v.play().catch(() => {});
     } else if (v.paused) {

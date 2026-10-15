@@ -16,7 +16,8 @@ import {
   whatsappLink,
   type Package,
 } from '@/lib/catalog';
-import { EASE, track } from './ui';
+import { analytics } from '@/lib/analytics';
+import { EASE } from './ui';
 
 type Fields = { name: string; phone: string; altPhone: string; region: string; location: string; note: string };
 type Confirm = { ready: '' | 'yes' | 'no'; deliveryDay: '' | (typeof DELIVERY_DAYS)[number]; canAfford: boolean };
@@ -221,6 +222,7 @@ export default function Checkout({
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       return;
     }
+    analytics.checkoutStep('details_complete', pkg);
     setStep(2);
   };
 
@@ -247,7 +249,7 @@ export default function Checkout({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'We couldn’t send your order. Please try again.');
 
-      track('Lead', { value: pkg.price, currency: 'GHS', content_name: pkg.label, num_items: pkg.quantity });
+      analytics.lead(pkg, data.orderRef);
       setSuccess({ ref: data.orderRef, pkg });
       setFields((f) => ({ ...f, note: '' }));
       setStatus('idle');

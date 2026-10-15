@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter, Inter_Tight } from "next/font/google";
 import Script from "next/script";
+import { CONTACT, PACKAGES, PRODUCT_NAME } from "@/lib/catalog";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
+import Analytics from "./components/Analytics";
 import "./globals.css";
 
 const body = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -15,22 +18,88 @@ const serif = Instrument_Serif({
 const PIXEL_ID = "840496878444318";
 
 export const metadata: Metadata = {
-  title: "Evergreen Remedy Ghana - Forever Arctic Sea Omega-3 for Kids",
-  description:
-    "Everyday Omega-3 support for your child's growing brain. Forever Arctic Sea gives children DHA and EPA, nutrients that support normal brain function as part of a balanced diet.",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },
   icons: {
     icon: "/egr-logo.ico",
   },
+  // Share image comes from app/opengraph-image.tsx
   openGraph: {
+    type: "website",
+    url: "/",
+    siteName: SITE_NAME,
+    locale: "en_GH",
     title: "Forever Arctic Sea - Omega-3 for Kids | Evergreen Remedy Ghana",
     description:
       "Everyday Omega-3 DHA & EPA for growing children. Free delivery on 2+ bottles, pay on delivery in major cities.",
-    images: ["/thumbnail.png"],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Forever Arctic Sea - Omega-3 for Kids | Evergreen Remedy Ghana",
+    description: "Everyday Omega-3 DHA & EPA for growing children. Pay on delivery in major cities.",
+  },
+  ...(process.env.NEXT_PUBLIC_GSC_VERIFICATION && {
+    verification: { google: process.env.NEXT_PUBLIC_GSC_VERIFICATION },
+  }),
 };
 
 export const viewport: Viewport = {
   themeColor: "#f7f6f1",
+};
+
+// Structured data: who sells it and what's on offer (prices from the shared catalog)
+const prices = PACKAGES.map((p) => p.price);
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#org`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/egr-logo.ico`,
+      contactPoint: {
+        "@type": "ContactPoint",
+        telephone: CONTACT.phone,
+        contactType: "sales",
+        areaServed: "GH",
+        availableLanguage: ["en"],
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      publisher: { "@id": `${SITE_URL}/#org` },
+      inLanguage: "en-GH",
+    },
+    {
+      "@type": "Product",
+      "@id": `${SITE_URL}/#product`,
+      name: PRODUCT_NAME,
+      description:
+        "Omega-3 food supplement with DHA and EPA from fish and squid oils, blended with olive oil. 120 softgels per bottle.",
+      image: [`${SITE_URL}/fp1.png`, `${SITE_URL}/product.png`],
+      brand: { "@type": "Brand", name: "Forever Living" },
+      category: "Dietary Supplements",
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: "GHS",
+        lowPrice: Math.min(...prices),
+        highPrice: Math.max(...prices),
+        offerCount: PACKAGES.length,
+        availability: "https://schema.org/InStock",
+        url: `${SITE_URL}/#pricing`,
+        seller: { "@id": `${SITE_URL}/#org` },
+        areaServed: "GH",
+      },
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -39,9 +108,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${body.variable} ${display.variable} ${serif.variable}`}>
+    <html lang="en-GH" className={`${body.variable} ${display.variable} ${serif.variable}`}>
       <body className="font-sans">
         {children}
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+
+        <Analytics />
 
         {/* Meta Pixel */}
         <Script id="facebook-pixel" strategy="afterInteractive">

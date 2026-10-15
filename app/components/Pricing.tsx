@@ -137,7 +137,7 @@ export default function Pricing({ onOrder }: { onOrder: (p: Package) => void }) 
 
 export function Contact() {
   return (
-    <section className="px-5 py-24 md:py-36">
+    <section id="contact" className="px-5 py-24 md:py-36">
       <Reveal className="mx-auto max-w-3xl text-center">
         <h2 className="font-display text-4xl font-semibold leading-[1.02] tracking-[-0.035em] text-ink text-balance md:text-6xl">
           Questions? <span className="font-serif font-normal italic tracking-normal text-leaf">We’re one call away.</span>

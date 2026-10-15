@@ -3,21 +3,6 @@
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import type { ReactNode } from 'react';
 
-declare global {
-  interface Window {
-    fbq?: (...args: unknown[]) => void;
-  }
-}
-
-// Meta Pixel helper — no-ops if the pixel hasn't loaded (ad blockers etc.)
-export const track = (event: string, params?: Record<string, unknown>) => {
-  try {
-    window.fbq?.('track', event, params);
-  } catch {
-    /* ignore */
-  }
-};
-
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
 export const Logo = () => (

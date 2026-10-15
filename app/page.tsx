@@ -12,7 +12,8 @@ import Nav from './components/Nav';
 import Pricing, { Contact } from './components/Pricing';
 import Story from './components/Story';
 import Testimonials from './components/Testimonials';
-import { Logo, WhatsAppIcon, track } from './components/ui';
+import { Logo, WhatsAppIcon } from './components/ui';
+import { analytics } from '@/lib/analytics';
 
 export default function EvergreenRemedyWebsite() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -26,7 +27,7 @@ export default function EvergreenRemedyWebsite() {
     const chosen = pkg ?? getPackage('family')!;
     setPackageId(chosen.id);
     setCheckoutOpen(true);
-    track('InitiateCheckout', { value: chosen.price, currency: 'GHS', content_name: chosen.label });
+    analytics.beginCheckout(chosen);
   }, []);
   const closeCheckout = useCallback(() => setCheckoutOpen(false), []);
 
@@ -66,6 +67,7 @@ export default function EvergreenRemedyWebsite() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with us on WhatsApp"
+        data-placement="floating_button"
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 1.5, type: 'spring' }}
@@ -97,6 +99,7 @@ export default function EvergreenRemedyWebsite() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Chat with us on WhatsApp"
+              data-placement="mobile_dock"
               className="grid h-11 w-11 place-items-center rounded-full bg-[#25D366] text-white"
             >
               <WhatsAppIcon className="h-5 w-5" />
