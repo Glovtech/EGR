@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { BASE_PRICE, CURRENCY, PAY_ON_DELIVERY_LABEL } from '@/lib/catalog';
 import StoryVideo from './StoryVideo';
-import { AVERAGE_RATING } from './Testimonials';
 import { EASE } from './ui';
 
 // Words wrapped in *asterisks* get the italic serif accent
@@ -36,15 +35,6 @@ export default function Hero({ onOrder }: { onOrder: () => void }) {
             className="relative mx-auto w-full max-w-[340px] lg:w-[340px]"
           >
             <StoryVideo className="ring-1 ring-white/10" label="Watch this before you order" />
-            <motion.div
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.1, duration: 0.8, ease: EASE }}
-              className="absolute -right-12 top-16 hidden rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-xl xl:block"
-            >
-              <p className="font-serif text-2xl italic leading-none text-leaf-soft">{AVERAGE_RATING} / 5</p>
-              <p className="mt-1 text-xs text-white/60">from parents across Ghana</p>
-            </motion.div>
           </motion.div>
 
           {/* Copy */}
