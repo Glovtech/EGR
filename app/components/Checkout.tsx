@@ -11,39 +11,29 @@ import {
   PRODUCT_NAME,
   REGIONS,
   getPackage,
-  normalizeGhanaPhone,
   savingsFor,
   whatsappLink,
   type Package,
 } from '@/lib/catalog';
 import { analytics } from '@/lib/analytics';
+import {
+  DETAIL_FIELDS,
+  MESSAGES,
+  validateConfirm,
+  validateDetails,
+  type DetailField,
+  type OrderConfirm,
+  type OrderDetails,
+  type OrderErrors,
+} from '@/lib/order';
 import { EASE } from './ui';
 
-type Fields = { name: string; phone: string; altPhone: string; region: string; location: string; note: string };
-type Confirm = { ready: '' | 'yes' | 'no'; deliveryDay: '' | (typeof DELIVERY_DAYS)[number]; canAfford: boolean };
-type Errors = Partial<Record<keyof Fields | keyof Confirm, string>>;
+type Fields = OrderDetails;
+type Confirm = OrderConfirm;
 
 const EMPTY: Fields = { name: '', phone: '', altPhone: '', region: '', location: '', note: '' };
 const EMPTY_CONFIRM: Confirm = { ready: '', deliveryDay: '', canAfford: false };
 const DRAFT_KEY = 'egr-checkout-draft';
-
-const validateDetails = (f: Fields): Errors => {
-  const e: Errors = {};
-  if (f.name.trim().length < 2) e.name = 'Please enter your full name.';
-  if (!normalizeGhanaPhone(f.phone)) e.phone = 'Enter a valid Ghana number, e.g. 024 412 3456.';
-  if (f.altPhone.trim() && !normalizeGhanaPhone(f.altPhone)) e.altPhone = 'Enter a valid number, or leave it blank.';
-  if (!REGIONS.includes(f.region)) e.region = 'Please select your region.';
-  if (f.location.trim().length < 6) e.location = 'Please be specific — add an area and a landmark near you.';
-  return e;
-};
-
-const validateConfirm = (c: Confirm): Errors => {
-  const e: Errors = {};
-  if (c.ready !== 'yes') e.ready = 'Please only order when you’re ready to receive and pay.';
-  if (!c.deliveryDay) e.deliveryDay = 'Choose when the rider should deliver.';
-  if (!c.canAfford) e.canAfford = 'Please confirm before placing your order.';
-  return e;
-};
 
 function Field({ label, error, hint, children }: { label: string; error?: string; hint?: string; children: ReactNode }) {
   return (
@@ -136,6 +126,8 @@ export default function Checkout({
   const [triedStep, setTriedStep] = useState<{ 1: boolean; 2: boolean }>({ 1: false, 2: false });
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [serverError, setServerError] = useState('');
+  // Field errors the server returned (e.g. a rule the form missed); cleared when that field is edited
+  const [serverFieldErrors, setServerFieldErrors] = useState<OrderErrors>({});
   const [success, setSuccess] = useState<{ ref: string; pkg: Package } | null>(null);
   const [showNote, setShowNote] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -205,11 +197,13 @@ export default function Checkout({
 
   const detailErrors = validateDetails(fields);
   const confirmErrors = validateConfirm(confirm);
-  const show = (k: keyof Fields) => (triedStep[1] || touched[k] ? detailErrors[k] : undefined);
+  const show = (k: keyof Fields) => serverFieldErrors[k] ?? (triedStep[1] || touched[k] ? detailErrors[k] : undefined);
   const showConfirm = (k: keyof Confirm) => (triedStep[2] ? confirmErrors[k] : undefined);
 
-  const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFields((f) => ({ ...f, [k]: e.target.value }));
+    setServerFieldErrors((errs) => ({ ...errs, [k]: undefined }));
+  };
   const blur = (k: keyof Fields) => () => setTouched((t) => ({ ...t, [k]: true }));
 
   const goToConfirm = (e: React.FormEvent<HTMLFormElement>) => {
@@ -239,22 +233,37 @@ export default function Checkout({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...fields,
-          readyToPay: confirm.ready === 'yes',
-          deliveryDay: confirm.deliveryDay,
-          canAfford: confirm.canAfford,
+          ...confirm,
           packageId: pkg.id,
           company: honeypot.current?.value ?? '',
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'We couldn’t send your order. Please try again.');
+      if (!res.ok) {
+        // A detail the server rejected: send the customer back to that field on step 1
+        const field = data?.field as DetailField | undefined;
+        if (field && DETAIL_FIELDS.includes(field)) {
+          setServerFieldErrors({ [field]: data.error });
+          setStatus('idle');
+          setStep(1);
+          setTimeout(() => {
+            const el = document.querySelector<HTMLElement>(`[role="dialog"] [name="${field}"]`);
+            el?.focus();
+            el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }, 350);
+          return;
+        }
+        throw new Error(data?.error || MESSAGES.sendFailed);
+      }
 
       analytics.lead(pkg, data.orderRef);
       setSuccess({ ref: data.orderRef, pkg });
       setFields((f) => ({ ...f, note: '' }));
       setStatus('idle');
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Something went wrong.');
+      // fetch() rejects with a TypeError ("Failed to fetch" / "Load failed") when the network is down
+      const offline = err instanceof TypeError || (typeof navigator !== 'undefined' && !navigator.onLine);
+      setServerError(offline ? MESSAGES.offline : err instanceof Error ? err.message : MESSAGES.sendFailed);
       setStatus('error');
       setTimeout(() => errorBox.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 50);
     }
